@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rapportværktøj</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg1:#6a11cb;
+      --bg2:#b91372;
+      --ink:#1f1f1f;
+      --muted:#6b6b6b;
+      --panel:#ffffff;
+      --line:#e6e6e6;
+      --soft:#f7f7fb;
+      --accent:#6a11cb;
+      --danger:#d33;
+      --shadow: 0 8px 24px rgba(0,0,0,.10);
+      --radius: 14px;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{
+      font-family:'Montserrat',sans-serif;
+      background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 100%);
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      padding:18px;
+      color:var(--ink);
+    }
+
+    .app{
+      width:100%;
+      max-width:1200px;
+      background:var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height: calc(100vh - 36px);
+      /* When the app is in home-mode (landing/auth/info/reports), we remove the white card look. */
+    }
+
+    /* Remove card styling on landing/auth/info/reports views. The "home-mode" class is applied via JS. */
+    .app.home-mode{
+      /* For the landing/home view we remove the card so the gradient shows through */
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      min-height: 100vh;
+    }
+    .app.home-mode header{
+      /* Keep the standard header (purple) on the home view */
+      border-radius: 0;
+      background: var(--bg1);
+      color:#fff;
+      box-shadow:none;
+    }
+
+    /* Header */
+    header{
+      background: var(--bg1);
+      color:#fff;
+      padding:14px 18px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    header h1{
+      font-size:1.25rem;
+      font-weight:600;
+      margin-right:auto;
+    }
+    .icon-btn{
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.25);
+      color:#fff;
+      border-radius: 10px;
+      padding:8px 10px;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-weight:600;
+      line-height: 1;
+    }
+    .icon-btn:hover{ background: rgba(255,255,255,.10); }
+    .icon-btn:active{ transform: translateY(1px); }
+
+    /* Views */
+    .view{ display:none; padding:18px; }
+    .view.active{ display:block; }
+
+    /* Type selection */
+    .types-top{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .types-top h2{ font-size:1.25rem; color:#322e6b; }
+    .types{
+      list-style:none;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .type-pill{
+      background: #f5f3fa;
+      border: 1px solid #d5cbe9;
+      border-radius: 999px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:600;
+      color:#5d47a4;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .type-pill:hover{ background:#ebe3f7; }
+    .type-pill button{
+      border:none;
+      background:transparent;
+      color: var(--danger);
+      cursor:pointer;
+      font-size:1.1rem;
+      line-height:1;
+      padding:0 2px;
+    }
+
+    .primary{
+      background: var(--accent);
+      color:#fff;
+      border:none;
+      border-radius: 10px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .primary:hover{ filter: brightness(.95); }
+
+    .secondary{
+      background: #ececf4;
+      color:#222;
+      border: 1px solid #dedeea;
+      border-radius: 10px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .secondary:hover{ background:#e6e6f0; }
+
+    /* Center layout on first page (type selection) */
+    #viewTypes.active{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      min-height: calc(100vh - 120px);
+    }
+    #viewTypes .types-top{
+      width: min(900px, 100%);
+      margin: 0 auto 16px;
+      justify-content:center;
+    }
+    #viewTypes .types-top > div{ width:100%; }
+    #viewTypes .types{ justify-content:center; }
+
+    /* Builder layout */
+    .builder{
+      display:grid;
+      grid-template-columns: 280px 1fr 340px;
+      gap:0;
+      height: calc(100vh - 120px);
+      min-height: 520px;
+      border-top: 1px solid rgba(255,255,255,.0);
+    }
+
+    /* Sidebar and main backgrounds updated to lightly tinted panels so the purple gradient shows through
+       and the visual language matches the other pages. Using semi-transparent white allows the gradient
+       to influence the panels while still providing contrast for text and controls. */
+    aside{
+      background: rgba(255,255,255,.85);
+      border-right:1px solid rgba(255,255,255,.3);
+      overflow:auto;
+    }
+    aside.right{
+      background: rgba(255,255,255,.9);
+      border-right:none;
+      border-left:1px solid rgba(255,255,255,.3);
+    }
+    main{
+      overflow:auto;
+      padding:16px;
+      background: rgba(255,255,255,.93);
+    }
+
+    .panel-head{
+      position:sticky;
+      top:0;
+      background: inherit;
+      padding:14px 14px 10px;
+      border-bottom:1px solid var(--line);
+      z-index:2;
+    }
+    .panel-head h3{
+      font-size:1rem;
+      color:#322e6b;
+      margin-bottom:0;
+    }
+
+    /* Discreet sidebar toggles */
+    aside .panel-head .icon-btn{
+      border: 1px solid rgba(0,0,0,.10);
+      color:#333;
+      background: transparent;
+      padding:6px 8px;
+      border-radius: 10px;
+      font-weight:700;
+    }
+    aside .panel-head .icon-btn:hover{
+      background: rgba(0,0,0,.04);
+    }
+
+    /* Sidebar show-handles (visible when pane is hidden) */
+    .pane-handle{
+      position:absolute;
+      top:12px;
+      z-index: 20;
+      border: 1px solid rgba(0,0,0,.12);
+      background: rgba(255,255,255,.92);
+      color:#333;
+      border-radius: 12px;
+      padding:8px 10px;
+      cursor:pointer;
+      box-shadow: 0 8px 18px rgba(0,0,0,.08);
+      display:none; /* shown via JS only when needed */
+      font-weight: 800;
+      line-height: 1;
+    }
+    .pane-handle:hover{ background:#fff; }
+    .pane-handle.left{ left: 12px; }
+    .pane-handle.right{ right: 12px; }
+
+    /* Snippets */
+    .list{ padding:12px 14px 16px; }
+    .snippet{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius: 12px;
+      margin-bottom:10px;
+      cursor:pointer;
+    }
+    .snippet:hover{ background:#f7f7ff; }
+    .snippet .title{ font-weight:600; }
+    .snippet .actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-shrink:0;
+    }
+    .action{
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      font-weight:700;
+      color: var(--accent);
+    }
+    .action.danger{ color: var(--danger); }
+    .action:hover{ text-decoration:underline; }
+
+    /* Report card */
+    .card{
+      max-width: 760px;
+      margin: 0 auto;
+      border:1px solid var(--line);
+      border-radius: 16px;
+      padding:18px 18px 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    }
+    .card h2{
+      font-size:1.25rem;
+      color:#322e6b;
+      margin-bottom:12px;
+      text-align:center;
+    }
+    .block{
+      border:1px solid var(--line);
+      border-radius: 12px;
+      padding:12px;
+      margin-bottom:12px;
+      position:relative;
+      background:#fff;
+    }
+    .block label{
+      display:block;
+      font-weight:600;
+      margin-bottom:8px;
+      color:#322e6b;
+    }
+    .block .text{
+      white-space:pre-wrap;
+      color:#333;
+      font-size:.95rem;
+      padding-right:92px;
+      min-height: 44px;
+    }
+    .block .b-actions{
+      position:absolute;
+      top:10px;
+      right:10px;
+      display:flex;
+      gap:10px;
+    }
+    .pill{
+      border:1px solid var(--line);
+      background:#fafafe;
+      border-radius:999px;
+      padding:6px 10px;
+      cursor:pointer;
+      font-weight:600;
+      color:#333;
+    }
+    .pill:hover{ background:#f1f1fb; }
+    .pill.danger{ color: var(--danger); border-color:#ffd6d6; background:#fff7f7; }
+
+    /* Export */
+    .export{
+      max-width: 760px;
+      margin: 12px auto 0;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+      align-items:center;
+    }
+    textarea{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius: 12px;
+      padding:10px;
+      margin-top:10px;
+      font-family: inherit;
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    /* Right editor */
+    .editor{
+      padding:12px 14px 16px;
+    }
+    .editor .hint{
+      color: var(--muted);
+      font-size: .9rem;
+      margin: 2px 0 10px;
+    }
+    .field{ margin-bottom:10px; }
+    .field label{
+      display:block;
+      font-weight:600;
+      color:#322e6b;
+      margin-bottom:6px;
+    }
+    input, .editor textarea{
+      width:100%;
+      border:1px solid #cfcfe0;
+      border-radius: 10px;
+      padding:10px;
+      font-family: inherit;
+      font-size: .95rem;
+    }
+    .editor textarea{ min-height: 120px; }
+    .btn-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    /* Modal (for adding blocks with placeholders) */
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .modal-backdrop.show{ display:flex; }
+    .modal{
+      width: min(720px, 100%);
+      background:#fff;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modal header{
+      background: #fff;
+      color: var(--ink);
+      border-bottom:1px solid var(--line);
+      padding:14px 18px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .modal header h4{
+      font-size:1rem;
+      font-weight:700;
+      margin-right:auto;
+    }
+    .modal .body{ padding:14px; }
+    .modal .footer{
+      padding:14px;
+      border-top:1px solid var(--line);
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    /* Toast */
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform: translateX(-50%);
+      background:#111;
+      color:#fff;
+      padding:10px 12px;
+      border-radius: 999px;
+      font-weight:600;
+      display:none;
+      z-index:60;
+    }
+    .toast.show{ display:block; }
+
+    /* Mobile */
+    @media (max-width: 980px){
+      .builder{ grid-template-columns: 280px 1fr; }
+      /* aside.right is NOT forced hidden, so it can be toggled via JS */
+    }
+    @media (max-width: 720px){
+      header{ flex-wrap:wrap; }
+      .builder{ grid-template-columns: 1fr; height:auto; min-height: unset; }
+      aside{ border-right:none; border-bottom:1px solid var(--line); }
+      main{ padding:14px; }
+      .block .text{ padding-right: 0; }
+      .block .b-actions{ position:static; margin-top:10px; justify-content:flex-end; }
+      .export{ justify-content:flex-start; }
+      .pane-handle{ top:10px; }
+    }
+
+    /* =========================
+   Forside – gradient look
+   ========================= */
+#viewTypes{
+  background: linear-gradient(
+    135deg,
+    #6a11cb 0%,
+    #b91372 100%
+  );
+}
+
+/* Hvidt kort på forsiden */
+#viewTypes > div{
+  background: rgba(255,255,255,.96);
+  padding: 36px 40px;
+  border-radius: 22px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.18);
+  max-width: 900px;
+  width: 100%;
+}
+
+    /* =========================
+    Navigation bar
+    ========================= */
+    .top-nav{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      margin-left:20px;
+    }
+    .top-nav a{
+      color:#fff;
+      text-decoration:none;
+      font-weight:600;
+      padding:6px 12px;
+      border-radius:8px;
+      font-size:.95rem;
+    }
+    .top-nav a:hover{
+      background:rgba(255,255,255,.15);
+    }
+    .hidden{ display:none !important; }
+
+    /* =========================
+    Home & Auth views
+    ========================= */
+    #viewHome, #viewAuth, #viewInfo, #viewReports{
+      display:none;
+      padding:18px;
+      flex:1;
+      align-items:center;
+      justify-content:center;
+      min-height: calc(100vh - 120px);
+      flex-direction:column;
+      text-align:center;
+    }
+    #viewHome.active, #viewAuth.active, #viewInfo.active, #viewReports.active{
+      display:flex;
+    }
+
+    /* Home hero page styling: white text on gradient background */
+    #viewHome{
+      color:#fff;
+    }
+    #viewHome h2{
+      font-size:2rem;
+      margin-bottom:12px;
+      color:#fff;
+    }
+    #viewHome p{
+      font-size:1.1rem;
+      color:rgba(255,255,255,.9);
+      margin-bottom:24px;
+      max-width:640px;
+    }
+    #viewHome .home-buttons{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+    #viewHome .home-buttons button{
+      font-size:1rem;
+    }
+
+    /* Info and Reports pages shown on the gradient background use white text for headings and paragraphs */
+    #viewInfo,
+    #viewReports{
+      color:#fff;
+    }
+    #viewInfo h2,
+    #viewReports h2{
+      color:#fff;
+    }
+    #viewInfo p,
+    #viewReports p{
+      color: rgba(255,255,255,.9);
+    }
+    /* Deprecated: home-card is no longer used but kept for backwards compatibility */
+    .home-card, .auth-card{
+      background: rgba(255,255,255,.96);
+      padding:36px 40px;
+      border-radius:22px;
+      box-shadow:0 18px 40px rgba(0,0,0,.18);
+      max-width:480px;
+      width:100%;
+      text-align:center;
+    }
+    .home-card h2{
+      font-size:1.5rem;
+      color:#322e6b;
+      margin-bottom:10px;
+    }
+    .home-card p{
+      color:var(--muted);
+      margin-bottom:20px;
+    }
+    .home-card .home-buttons{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .home-card button{
+      width:100%;
+    }
+    .auth-card h2{
+      font-size:1.4rem;
+      color:#322e6b;
+      margin-bottom:16px;
+    }
+    .auth-card form{
+      margin-bottom:10px;
+    }
+    .auth-card input{
+      width:100%;
+      border:1px solid #cfcfe0;
+      border-radius:10px;
+      padding:10px;
+      font-family:inherit;
+      font-size:.95rem;
+      margin-bottom:10px;
+    }
+    .auth-card button{
+      width:100%;
+    }
+    .auth-switch{
+      margin-top:6px;
+      font-size:.9rem;
+      color:var(--muted);
+    }
+    .auth-switch button{
+      margin-left:6px;
+      padding:6px 12px;
+      border-radius:10px;
+    }
+
+    /* Reports list */
+    .reports-list{
+      width:100%;
+      max-width:900px;
+      margin:0 auto;
+      padding:0 10px;
+    }
+    /* Report list items are rendered as interactive buttons */
+    .report-item{
+      /* Layout as a flex row to accommodate delete button */
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      width:100%;
+      /* White panel with accent border for clear contrast on purple background */
+      border:1px solid var(--accent);
+      border-radius:14px;
+      padding:14px 18px;
+      margin-bottom:12px;
+      background:#fff;
+      color:var(--bg1);
+      box-shadow:0 2px 8px rgba(0,0,0,.08);
+      text-align:left;
+      cursor:pointer;
+    }
+    .report-item h3{
+      margin:0 0 8px;
+      color:var(--bg1);
+      font-size:1.05rem;
+    }
+    .report-item .report-text{
+      white-space:pre-wrap;
+      color:#322e6b;
+      font-size:.9rem;
+      margin-bottom:8px;
+    }
+    .report-item:hover{
+      /* On hover, lightly tint the panel with the secondary color */
+      background:rgba(186, 19, 114, 0.08);
+    }
+
+    /* Delete button inside report items */
+    .report-item .delete-report{
+      background: none;
+      border: none;
+      color: var(--danger);
+      font-size:1.2rem;
+      line-height:1;
+      cursor:pointer;
+      margin-left:12px;
+    }
+    .report-item .delete-report:hover{
+      color:#b20;
+    }
+
+    /* Ensure report names use accent color on white panel */
+    .report-item .report-name{
+      color:var(--bg1);
+    }
+
+    /* Base styling for nav links: header is always purple, links white */
+    .top-nav a{
+      color:#fff;
+      text-decoration:none;
+      font-weight:600;
+      padding:6px 12px;
+      border-radius:8px;
+      font-size:.95rem;
+      cursor:pointer;
+    }
+    .top-nav a:hover{
+      background:rgba(255,255,255,.15);
+    }
+    /* Highlight certain nav links (Forside, Rapporter, Info) with a semi-transparent white background */
+    .top-nav a.nav-highlight{
+      background: rgba(255,255,255,.8);
+      color: var(--bg1);
+    }
+    .top-nav a.nav-highlight:hover{
+      background:#fff;
+    }
+
+    /* Hide the legacy Back and Reset header buttons permanently. These buttons were
+       previously used for navigating between views but are no longer part of the
+       interface. Even though JavaScript still references them, setting
+       display:none!important ensures they never appear regardless of any runtime
+       toggling. */
+    #btnBack,
+    #btnReset {
+      display: none !important;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="app" id="app">
+    <header>
+      <button class="icon-btn" id="btnBack" title="Tilbage" style="display:none;">← Tilbage</button>
+      <h1>Rapportværktøj</h1>
+      <!-- Navigation links -->
+      <nav class="top-nav">
+        <!-- Forside (always visible) -->
+        <a href="#" id="navHome" class="nav-highlight">Forside</a>
+        <!-- Rapporter (visible only when logged in) -->
+        <a href="#" id="navReports" class="hidden nav-highlight">Rapporter</a>
+        <!-- Rapportværktøj (visible only when logged in) -->
+        <a href="#" id="navBuilder" class="hidden nav-highlight">Rapportværktøj</a>
+        <!-- Info -->
+        <a href="#" id="navInfo" class="nav-highlight">Info</a>
+        <!-- Login / Logout -->
+        <a href="#" id="navLogin" class="nav-highlight">Log ind</a>
+        <a href="#" id="navLogout" class="hidden nav-highlight">Log ud</a>
+      </nav>
+      <button class="icon-btn" id="btnReset" title="Nulstil (sletter lokalt)" style="display:none;">⟲ Nulstil</button>
+    </header>
+
+    <!-- Home view -->
+    <section class="view" id="viewHome">
+      <h2>Velkommen til Easy Template</h2>
+      <p>Byg, administrer og eksportér rapporter nemt og hurtigt. Opret en konto for at komme i gang.</p>
+      <div class="home-buttons">
+        <button class="primary" id="homeLogin">Log ind</button>
+        <button class="secondary" id="homeSignup">Opret konto</button>
+        <button class="secondary" id="homeInfo">Info</button>
+      </div>
+    </section>
+
+    <!-- Auth view -->
+    <section class="view" id="viewAuth">
+      <div class="auth-card">
+        <h2 id="authTitle">Log ind</h2>
+        <form id="loginForm">
+          <input type="text" id="loginUsername" placeholder="Brugernavn" required />
+          <input type="password" id="loginPassword" placeholder="Kodeord" required />
+          <button type="submit" class="primary">Log ind</button>
+        </form>
+        <form id="signupForm" style="display:none;">
+          <input type="text" id="signupUsername" placeholder="Brugernavn" required />
+          <input type="password" id="signupPassword" placeholder="Kodeord" required />
+          <input type="password" id="signupPassword2" placeholder="Gentag kodeord" required />
+          <button type="submit" class="primary">Opret konto</button>
+        </form>
+        <div class="auth-switch">
+          <span id="authSwitchText">Har du ikke en konto?</span>
+          <button type="button" class="secondary" id="authSwitchBtn">Opret konto</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Info view -->
+    <section class="view" id="viewInfo">
+      <h2>Information</h2>
+      <p>Her kan du læse mere om, hvordan værktøjet fungerer og få tips til at skrive rapporter. Denne side kan du tilpasse med relevante oplysninger.</p>
+    </section>
+
+    <!-- Reports view -->
+    <section class="view" id="viewReports">
+      <h2>Rapporttyper</h2>
+      <!-- Removed inline color so the paragraph inherits the default light text color on the purple gradient -->
+      <p style="margin-bottom:10px; max-width:900px; margin-left:auto; margin-right:auto;">Vælg en rapporttype for at se eller redigere rapporten. Gemte rapporter kan genåbnes senere.</p>
+      <div id="reportsList" class="reports-list"></div>
+    </section>
+
+    <!-- Type selection -->
+    <section class="view" id="viewTypes">
+      <div>
+        <div class="types-top">
+          <div>
+            <h2>Velkommen til Easy Template </h2>
+            <div style="color:var(--muted); margin-top:6px;">Vælg en rapporttype for at redigere eller opret en ny fra værktøjet</div>
+          </div>
+        </div>
+
+        <ul class="types" id="typeList"></ul>
+        <!-- The add-type button is now placed in the report builder, not here. -->
+      </div>
+    </section>
+
+    <!-- Builder -->
+    <section class="view" id="viewBuilder" style="padding:0; position:relative;">
+      <!-- Handles that appear when sidebars are hidden -->
+      <button class="pane-handle left" id="btnShowLibrary" title="Vis bibliotek" aria-label="Vis bibliotek">☰</button>
+      <button class="pane-handle right" id="btnShowEditor" title="Vis editor" aria-label="Vis editor">☰</button>
+
+      <div class="builder">
+        <!-- Left: library -->
+        <aside id="libraryPane">
+          <div class="panel-head" style="display:flex; align-items:center; justify-content:space-between;">
+            <h3>Bibliotek</h3>
+            <button class="icon-btn" id="btnToggleLibrary" title="Skjul/vis bibliotek">☰</button>
+          </div>
+
+          <div class="list" id="snippetList"></div>
+
+      
+
+          <div style="padding:12px 14px;">
+            <button class="primary" id="btnAddSnippet">Tilføj</button>
+          </div>
+        
+         </aside>
+        
+
+        <!-- Main -->
+        <main>
+          <div class="card">
+            <h2 id="reportTitle"></h2>
+            <div id="reportBlocks"></div>
+            <div style="color:var(--muted); font-size:.9rem;" id="emptyHint"></div>
+          </div>
+
+          <!-- Actions under report preview -->
+          <textarea id="output" readonly placeholder="Eksporteret rapport vises her…"></textarea>
+
+          <!-- Action bar: save, add type, copy etc. -->
+          <div class="export">
+            <!-- Save report button: persists current report blocks and shows toast -->
+            <button class="primary" id="btnSaveReport">Gem rapport</button>
+            <!-- Create new report type button (moved from type selection) -->
+            <button class="secondary" id="btnAddType">Ny type</button>
+            <!-- Existing actions -->
+            <button class="primary" id="btnCopy">Kopiér rapport</button>
+            <button class="secondary" id="btnEmail">Send som email</button>
+            <button class="secondary" id="btnClearBlocks">Ryd rapport</button>
+          </div>
+
+           
+        </main>
+
+        <!-- Right: editor -->
+        <aside class="right" id="editorPane">
+          <div class="panel-head" style="display:flex; align-items:center; justify-content:space-between;">
+            <h3 id="editorTitle">Rediger</h3>
+            <button class="icon-btn" id="btnToggleEditor" title="Skjul/vis editor">☰</button>
+          </div>
+          <div class="editor" id="editorBody">
+            <div class="hint">Rediger din standard sætning. Hvis du tiljøet { } og giver dem en værdi som fx {Navn} så vil værdien blive tilføjet i din tekst. Prøv ad.</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Modal: Add block -->
+    <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <header>
+          <h4 id="modalTitle">Indsæt blok</h4>
+          <button class="icon-btn" id="btnModalClose" title="Luk">✕</button>
+        </header>
+        <div class="body" id="modalBody"></div>
+        <div class="footer">
+          <button class="secondary" id="btnModalCancel">Annuller</button>
+          <button class="primary" id="btnModalInsert">Indsæt</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script>
+    /***********************
+     * Storage + State
+     ***********************/
+    const STORAGE_KEY = "report_tool_v2_state";
+
+    // User management keys
+    const USERS_KEY = "report_tool_users";
+    const CURRENT_USER_KEY = "report_tool_current_user";
+
+    // Helper functions for user management
+    function loadUsers(){
+      try{
+        const raw = localStorage.getItem(USERS_KEY);
+        return raw ? JSON.parse(raw) : {};
+      }catch{
+        return {};
+      }
+    }
+    function saveUsers(obj){
+      localStorage.setItem(USERS_KEY, JSON.stringify(obj));
+    }
+    function getCurrentUser(){
+      return localStorage.getItem(CURRENT_USER_KEY);
+    }
+    function setCurrentUser(u){
+      currentUser = u;
+      if(u) localStorage.setItem(CURRENT_USER_KEY, u);
+      else localStorage.removeItem(CURRENT_USER_KEY);
+    }
+    let users = loadUsers();
+    let currentUser = getCurrentUser();
+
+    // Reference to the main app container. We'll use this to toggle a "home-mode" class which removes the card look
+    const appElement = document.getElementById("app");
+
+    const defaultData = {
+      reportTypes: {
+        "Hærværk": [
+          { id: crypto.randomUUID(), title: "Identifikation", text: "I dag kl. {tid} mødte jeg en person, som identificerede sig som værende {navn}." },
+          { id: crypto.randomUUID(), title: "Rapportør", text: "Rapporten blev skrevet af {forfatter} med titlen {titel}." }
+        ],
+        "Indbrud": [
+          { id: crypto.randomUUID(), title: "Lokation", text: "Hændelsen fandt sted på adressen {adresse}." }
+        ],
+        "Tyveri": []
+      },
+      currentType: null,
+      blocksByType: {}
+    };
+
+    function loadState(){
+      try{
+        // If a user is logged in, load the state from the users object
+        if(currentUser){
+          users[currentUser] = users[currentUser] || {};
+          const parsed = users[currentUser].state || null;
+          const s = { ...structuredClone(defaultData), ...(parsed || {}) };
+          s.blocksByType = s.blocksByType || {};
+          s.reportTypes = s.reportTypes || structuredClone(defaultData.reportTypes);
+          return s;
+        }
+
+        // Fallback for guest (no user) using localStorage
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return structuredClone(defaultData);
+        const parsed = JSON.parse(raw);
+        const s = { ...structuredClone(defaultData), ...parsed };
+        s.blocksByType = s.blocksByType || {};
+        s.reportTypes = s.reportTypes || structuredClone(defaultData.reportTypes);
+        return s;
+      }catch{
+        return structuredClone(defaultData);
+      }
+    }
+
+    function saveState(){
+      if(currentUser){
+        // Persist state in users object per user
+        users[currentUser] = users[currentUser] || {};
+        users[currentUser].state = structuredClone(state);
+        saveUsers(users);
+      }else{
+        // Guest fallback
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+      // If we are currently on the reports view, re-render reports to reflect changes
+      if(viewReports && viewReports.classList.contains("active")){
+        renderReports();
+      }
+    }
+
+    let state = loadState();
+
+    /***********************
+     * DOM
+     ***********************/
+    const viewTypes = document.getElementById("viewTypes");
+    const viewBuilder = document.getElementById("viewBuilder");
+    const typeList = document.getElementById("typeList");
+
+    // New views and navigation elements
+    const viewHome = document.getElementById("viewHome");
+    const viewAuth = document.getElementById("viewAuth");
+    const navHome = document.getElementById("navHome");
+    const navInfo = document.getElementById("navInfo");
+    const navReports = document.getElementById("navReports");
+    const navBuilder = document.getElementById("navBuilder");
+    const navLogin = document.getElementById("navLogin");
+    const navLogout = document.getElementById("navLogout");
+    const homeLogin = document.getElementById("homeLogin");
+    const homeSignup = document.getElementById("homeSignup");
+    const homeInfo = document.getElementById("homeInfo");
+    const loginForm = document.getElementById("loginForm");
+    const signupForm = document.getElementById("signupForm");
+    const authSwitchBtn = document.getElementById("authSwitchBtn");
+    const authSwitchText = document.getElementById("authSwitchText");
+    const authTitle = document.getElementById("authTitle");
+    const loginUsername = document.getElementById("loginUsername");
+    const loginPassword = document.getElementById("loginPassword");
+    const signupUsername = document.getElementById("signupUsername");
+    const signupPassword = document.getElementById("signupPassword");
+    const signupPassword2 = document.getElementById("signupPassword2");
+    const viewInfo = document.getElementById("viewInfo");
+    const viewReports = document.getElementById("viewReports");
+    const reportsList = document.getElementById("reportsList");
+
+    const btnAddType = document.getElementById("btnAddType");
+    const btnBack = document.getElementById("btnBack");
+    const btnReset = document.getElementById("btnReset");
+
+    const libraryPane = document.getElementById("libraryPane");
+    const snippetList = document.getElementById("snippetList");
+    const btnAddSnippet = document.getElementById("btnAddSnippet");
+    const btnToggleLibrary = document.getElementById("btnToggleLibrary");
+
+    const reportTitle = document.getElementById("reportTitle");
+    const reportBlocksEl = document.getElementById("reportBlocks");
+    const emptyHint = document.getElementById("emptyHint");
+    const output = document.getElementById("output");
+
+    const editorPane = document.getElementById("editorPane");
+    const editorTitle = document.getElementById("editorTitle");
+    const editorBody = document.getElementById("editorBody");
+    const btnToggleEditor = document.getElementById("btnToggleEditor");
+
+    const btnCopy = document.getElementById("btnCopy");
+    const btnEmail = document.getElementById("btnEmail");
+    const btnClearBlocks = document.getElementById("btnClearBlocks");
+    const btnSaveReport = document.getElementById("btnSaveReport");
+
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const modalBody = document.getElementById("modalBody");
+    const btnModalClose = document.getElementById("btnModalClose");
+    const btnModalCancel = document.getElementById("btnModalCancel");
+    const btnModalInsert = document.getElementById("btnModalInsert");
+
+    const btnShowLibrary = document.getElementById("btnShowLibrary");
+    const btnShowEditor = document.getElementById("btnShowEditor");
+
+    const toastEl = document.getElementById("toast");
+    const builderGrid = document.querySelector(".builder");
+
+    /***********************
+     * Helpers
+     ***********************/
+    function toast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastEl._t);
+      toastEl._t = setTimeout(()=> toastEl.classList.remove("show"), 1800);
+    }
+
+    function confirmUI(msg){
+      return window.confirm(msg);
+    }
+
+    function promptUI(msg, placeholder=""){
+      const val = window.prompt(msg, placeholder);
+      return (val ?? "").trim();
+    }
+
+    function escapeRegExp(str){
+      return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function extractPlaceholders(text){
+      const regex = /\{([^}]+)\}/g;
+      const seen = new Set();
+      let m;
+      while((m = regex.exec(text)) !== null){
+        seen.add(m[1]);
+      }
+      return [...seen];
+    }
+
+    function fillTemplate(template, values){
+      let out = template;
+      for(const [k,v] of Object.entries(values)){
+        out = out.replace(new RegExp("\\{" + escapeRegExp(k) + "\\}", "g"), v);
+      }
+      return out;
+    }
+
+    function getBlocks(){
+      const t = state.currentType;
+      if(!t) return [];
+      state.blocksByType[t] = state.blocksByType[t] || [];
+      return state.blocksByType[t];
+    }
+
+    function setView(name){
+      const isTypes = name === "types";
+      viewTypes.classList.toggle("active", isTypes);
+      viewBuilder.classList.toggle("active", !isTypes);
+
+      // Hide back and reset buttons; they are no longer used
+      btnBack.style.display = "none";
+      btnReset.style.display = "none";
+
+      updateBuilderColumns();
+      updatePaneHandles();
+    }
+
+    function closeEditor(){
+      editorTitle.textContent = "Rediger";
+      editorBody.innerHTML = '<div class="hint">Vælg en standardsætning eller blok for at redigere.</div>';
+    }
+
+    /***********************
+     * Pane visibility + grid
+     ***********************/
+    let leftPaneVisible = true;
+    let rightPaneVisible = true;
+
+    function openEditor(){
+      rightPaneVisible = true;
+      editorPane.style.display = "";
+      updateBuilderColumns();
+      updatePaneHandles();
+    }
+
+    function toggleLeftPane(){
+      leftPaneVisible = !leftPaneVisible;
+      libraryPane.style.display = leftPaneVisible ? "" : "none";
+      updateBuilderColumns();
+      updatePaneHandles();
+    }
+
+    function toggleRightPane(){
+      rightPaneVisible = !rightPaneVisible;
+      editorPane.style.display = rightPaneVisible ? "" : "none";
+      updateBuilderColumns();
+      updatePaneHandles();
+      if(!rightPaneVisible) closeEditor();
+    }
+
+    function updateBuilderColumns(){
+      const isMobile = window.matchMedia("(max-width: 720px)").matches;
+      if(isMobile){
+        builderGrid.style.gridTemplateColumns = "1fr";
+        return;
+      }
+
+      const isMid = window.matchMedia("(max-width: 980px)").matches;
+
+      const showLeft = leftPaneVisible;
+      const showRight = rightPaneVisible;
+
+      if(isMid){
+        if(showLeft) builderGrid.style.gridTemplateColumns = "280px 1fr";
+        else builderGrid.style.gridTemplateColumns = "1fr";
+        return;
+      }
+
+      if(showLeft && showRight) builderGrid.style.gridTemplateColumns = "280px 1fr 340px";
+      else if(showLeft && !showRight) builderGrid.style.gridTemplateColumns = "280px 1fr";
+      else if(!showLeft && showRight) builderGrid.style.gridTemplateColumns = "1fr 340px";
+      else builderGrid.style.gridTemplateColumns = "1fr";
+    }
+
+    function updatePaneHandles(){
+      const inBuilder = viewBuilder.classList.contains("active");
+      if(!inBuilder){
+        btnShowLibrary.style.display = "none";
+        btnShowEditor.style.display = "none";
+        return;
+      }
+
+      btnShowLibrary.style.display = leftPaneVisible ? "none" : "inline-flex";
+      btnShowEditor.style.display = rightPaneVisible ? "none" : "inline-flex";
+    }
+
+    /***********************
+     * Authentication & Navigation
+     ***********************/
+    function hideAllViews(){
+      [viewHome, viewAuth, viewInfo, viewReports, viewTypes, viewBuilder].forEach(v => {
+        if(v) v.classList.remove("active");
+      });
+    }
+
+    function renderNav(){
+      if(currentUser){
+        // User is logged in
+        navLogin.classList.add("hidden");
+        navLogout.classList.remove("hidden");
+        navBuilder.classList.remove("hidden");
+        navReports.classList.remove("hidden");
+        if(homeLogin) homeLogin.style.display = "none";
+        if(homeSignup) homeSignup.style.display = "none";
+      }else{
+        navLogin.classList.remove("hidden");
+        navLogout.classList.add("hidden");
+        navBuilder.classList.add("hidden");
+        navReports.classList.add("hidden");
+        if(homeLogin) homeLogin.style.display = "";
+        if(homeSignup) homeSignup.style.display = "";
+      }
+    }
+
+    function showHome(){
+      hideAllViews();
+      viewHome.classList.add("active");
+      btnBack.style.display = "none";
+      btnReset.style.display = "none";
+      // Apply home-mode to remove card styling
+      if(appElement) appElement.classList.add("home-mode");
+    }
+
+    function showAuth(mode="login"){
+      hideAllViews();
+      viewAuth.classList.add("active");
+      btnBack.style.display = "none";
+      btnReset.style.display = "none";
+      // Ensure home-mode is removed so the login/signup form appears on a card
+      if(appElement) appElement.classList.remove("home-mode");
+      if(mode === "signup"){
+        loginForm.style.display = "none";
+        signupForm.style.display = "block";
+        authTitle.textContent = "Opret konto";
+        authSwitchText.textContent = "Har du allerede en konto?";
+        authSwitchBtn.textContent = "Log ind";
+      }else{
+        loginForm.style.display = "block";
+        signupForm.style.display = "none";
+        authTitle.textContent = "Log ind";
+        authSwitchText.textContent = "Har du ikke en konto?";
+        authSwitchBtn.textContent = "Opret konto";
+      }
+    }
+
+    function showBuilder(){
+      if(!currentUser){
+        // redirect to login page
+        showAuth("login");
+        return;
+      }
+      hideAllViews();
+
+      // Always show the builder view directly. If no report type is currently selected,
+      // default to the first available type (if any) so users aren't forced through a type selection page.
+      const names = Object.keys(state.reportTypes);
+      if(!state.currentType){
+        if(names.length > 0){
+          // Pick the first type alphabetically to open by default
+          const sorted = names.slice().sort((a,b)=>a.localeCompare(b,"da"));
+          selectType(sorted[0]);
+        } else {
+          // No types exist; ensure the view still shows the builder with empty state
+          state.currentType = null;
+        }
+      }
+      setView("builder");
+      // Re-render type list, library and report content
+      renderTypes();
+      renderLibrary();
+      renderReport();
+      updateBuilderColumns();
+      updatePaneHandles();
+      // Apply home-mode to ensure the purple gradient background appears behind the builder
+      if(appElement) appElement.classList.add("home-mode");
+    }
+
+    function logout(){
+      setCurrentUser(null);
+      // Reset state to default
+      state = structuredClone(defaultData);
+      renderNav();
+      closeEditor();
+      showHome();
+      // home-mode is applied by showHome
+    }
+
+    function showInfo(){
+      hideAllViews();
+      viewInfo.classList.add("active");
+      btnBack.style.display = "none";
+      btnReset.style.display = "none";
+      // Apply home-mode so the info page uses the purple gradient background
+      if(appElement) appElement.classList.add("home-mode");
+    }
+
+    function renderReports(){
+      if(!currentUser){
+        reportsList.innerHTML = "<div style='color:var(--muted);'>Log ind for at se dine rapporter.</div>";
+        return;
+      }
+      reportsList.innerHTML = "";
+      const names = Object.keys(state.reportTypes).sort((a,b)=>a.localeCompare(b,"da"));
+      if(names.length === 0){
+        const div = document.createElement("div");
+        div.style.color = "var(--muted)";
+        div.textContent = "Ingen rapporttyper endnu. Opret en ny i rapportværktøjet.";
+        reportsList.appendChild(div);
+        return;
+      }
+      for(const name of names){
+        // Render each report as a flex container with a title and a delete button
+        const item = document.createElement("div");
+        item.className = "report-item";
+        item.innerHTML = `
+          <span class="report-name">${name}</span>
+          <button class="delete-report" title="Slet ${name}" aria-label="Slet ${name}">×</button>
+        `;
+        // Clicking on the name opens the builder for that type
+        item.querySelector(".report-name").addEventListener("click", ()=>{
+          selectType(name);
+          showBuilder();
+        });
+        // Delete button removes the report type and its saved blocks
+        item.querySelector(".delete-report").addEventListener("click", (e)=>{
+          e.stopPropagation();
+          if(confirmUI(`Slet rapporttypen \"${name}\"? (standardsætninger + rapport-blokke slettes også)`)){
+            delete state.reportTypes[name];
+            delete state.blocksByType[name];
+            if(state.currentType === name) state.currentType = null;
+            saveState();
+            renderReports();
+            // If the deleted type was currently open in the builder, clear the builder view
+            if(viewBuilder.classList.contains("active")){
+              renderLibrary();
+              renderReport();
+            }
+          }
+        });
+        reportsList.appendChild(item);
+      }
+    }
+
+    function showReports(){
+      hideAllViews();
+      viewReports.classList.add("active");
+      btnBack.style.display = "none";
+      btnReset.style.display = "none";
+      renderReports();
+      // Apply home-mode so the reports page uses the purple gradient background
+      if(appElement) appElement.classList.add("home-mode");
+    }
+
+    /***********************
+     * Render
+     ***********************/
+    function renderTypes(){
+      typeList.innerHTML = "";
+      const names = Object.keys(state.reportTypes).sort((a,b)=>a.localeCompare(b,"da"));
+
+      for(const name of names){
+        const li = document.createElement("li");
+        li.className = "type-pill";
+        li.innerHTML = `
+          <span>${name}</span>
+          <button title="Slet type" aria-label="Slet type ${name}">×</button>
+        `;
+
+        li.addEventListener("click", (e)=>{
+          const isDelete = e.target.tagName === "BUTTON";
+          if(isDelete) return;
+          selectType(name);
+        });
+
+        li.querySelector("button").addEventListener("click", (e)=>{
+          e.stopPropagation();
+          if(confirmUI(`Slet rapporttypen "${name}"? (standardsætninger + rapport-blokke slettes også)`)){
+            delete state.reportTypes[name];
+            delete state.blocksByType[name];
+            if(state.currentType === name) state.currentType = null;
+            saveState();
+            renderTypes();
+          }
+        });
+
+        typeList.appendChild(li);
+      }
+    }
+
+    function renderLibrary(){
+      snippetList.innerHTML = "";
+      const t = state.currentType;
+      const snippets = state.reportTypes[t] || [];
+
+      if(snippets.length === 0){
+        const empty = document.createElement("div");
+        empty.style.color = "var(--muted)";
+        empty.textContent = "Ingen standardsætninger endnu. Tilføj en med knappen ovenfor.";
+        snippetList.appendChild(empty);
+        return;
+      }
+
+      for(const snip of snippets){
+        const div = document.createElement("div");
+        div.className = "snippet";
+
+        div.innerHTML = `
+          <div>
+            <div class="title">${snip.title || "Uden titel"}</div>
+          </div>
+          <div class="actions">
+            <button class="action" data-act="edit" title="Rediger">✎</button>
+            <button class="action danger" data-act="del" title="Slet">×</button>
+          </div>
+        `;
+
+        div.addEventListener("click",(e)=>{
+          const btn = e.target.closest("button");
+          const act = btn?.dataset?.act;
+
+          if(act === "edit"){ openSnippetEditor(snip.id); openEditor(); return; }
+          if(act === "del"){
+            if(confirmUI("Slet denne standardsætning?")){
+              const idx = snippets.findIndex(x=>x.id===snip.id);
+              if(idx >= 0) snippets.splice(idx,1);
+              saveState();
+              renderLibrary();
+              closeEditor();
+            }
+            return;
+          }
+
+          openAddBlockModal(snip);
+        });
+
+        snippetList.appendChild(div);
+      }
+    }
+
+    function renderReport(){
+      const t = state.currentType;
+      reportTitle.textContent = t || "";
+      const blocks = getBlocks();
+
+      reportBlocksEl.innerHTML = "";
+      emptyHint.textContent = blocks.length ? "" : "Tip: Klik på en standardsætning for at indsætte den i rapporten.";
+
+      blocks.forEach((b, idx)=>{
+        const el = document.createElement("div");
+        el.className = "block";
+        el.innerHTML = `
+          <label>${b.title || "Uden titel"}</label>
+          <div class="text">${b.text}</div>
+          <div class="b-actions">
+            <button class="pill" data-act="up" title="Flyt op" ${idx===0?"disabled":""}>↑</button>
+            <button class="pill" data-act="down" title="Flyt ned" ${idx===blocks.length-1?"disabled":""}>↓</button>
+            <button class="pill" data-act="dup" title="Dupliker">⎘</button>
+            <button class="pill" data-act="edit" title="Rediger">✎</button>
+            <button class="pill danger" data-act="del" title="Slet">×</button>
+          </div>
+        `;
+
+        el.addEventListener("click",(e)=>{
+          const btn = e.target.closest("button");
+          const act = btn?.dataset?.act;
+          if(!act) return;
+
+          if(act === "up" && idx>0){
+            blocks.splice(idx-1, 0, blocks.splice(idx,1)[0]);
+            saveState(); renderReport(); return;
+          }
+          if(act === "down" && idx<blocks.length-1){
+            blocks.splice(idx+1, 0, blocks.splice(idx,1)[0]);
+            saveState(); renderReport(); return;
+          }
+          if(act === "dup"){
+            const copy = structuredClone(b);
+            copy.id = crypto.randomUUID();
+            blocks.splice(idx+1, 0, copy);
+            saveState(); renderReport();
+            toast("Blok duplikeret");
+            return;
+          }
+          if(act === "edit"){ openBlockEditor(idx); return; }
+          if(act === "del"){
+            if(confirmUI("Slet denne blok?")){
+              blocks.splice(idx,1);
+              saveState(); renderReport(); closeEditor();
+            }
+          }
+        });
+
+        reportBlocksEl.appendChild(el);
+      });
+
+      output.value = blocks.map(b=>b.text).join("\n\n");
+    }
+
+    /***********************
+     * Actions
+     ***********************/
+    function selectType(typeName){
+      state.currentType = typeName;
+      state.blocksByType[typeName] = state.blocksByType[typeName] || [];
+      saveState();
+
+      leftPaneVisible = true;
+      rightPaneVisible = true;
+      libraryPane.style.display = "";
+      editorPane.style.display = "";
+      updateBuilderColumns();
+
+      setView("builder");
+      closeEditor();
+      renderLibrary();
+      renderReport();
+      updatePaneHandles();
+    }
+
+    function openSnippetEditor(snippetId){
+      const t = state.currentType;
+      const snippets = state.reportTypes[t] || [];
+      const snip = snippets.find(s=>s.id === snippetId);
+      if(!snip) return;
+
+      editorTitle.textContent = "Rediger standardsætning";
+      editorBody.innerHTML = `
+        <div class="field">
+          <label for="snipTitle">Titel</label>
+          <input id="snipTitle" type="text" value="${(snip.title||"").replaceAll('"','&quot;')}" />
+        </div>
+        <div class="field">
+          <label for="snipText">Tekst</label>
+          <textarea id="snipText">${snip.text || ""}</textarea>
+          <div class="hint">Placeholders skrives som {eksempel}.</div>
+        </div>
+        <div class="btn-row">
+          <button class="primary" id="btnSnipSave">Gem</button>
+          <button class="secondary" id="btnSnipCancel">Annuller</button>
+        </div>
+      `;
+
+      editorBody.querySelector("#btnSnipSave").onclick = ()=>{
+        const title = editorBody.querySelector("#snipTitle").value.trim() || "Uden titel";
+        const text = editorBody.querySelector("#snipText").value.trim();
+        if(!text){
+          toast("Tekst kan ikke være tom");
+          return;
+        }
+        snip.title = title;
+        snip.text = text;
+        saveState();
+        renderLibrary();
+        toast("Gemt");
+        closeEditor();
+      };
+
+      editorBody.querySelector("#btnSnipCancel").onclick = closeEditor;
+    }
+
+    function openBlockEditor(blockIndex){
+      openEditor();
+
+      const blocks = getBlocks();
+      const block = blocks[blockIndex];
+      if(!block) return;
+
+      editorTitle.textContent = "Rediger blok";
+      const placeholders = Object.keys(block.placeholders || {});
+      const phFields = placeholders.map(ph => `
+        <div class="field">
+          <label>${ph}</label>
+          <input data-ph="${ph}" type="text" value="${(block.placeholders[ph] ?? "").replaceAll('"','&quot;')}" />
+        </div>
+      `).join("");
+
+      editorBody.innerHTML = `
+        <div class="hint"><strong>${block.title}</strong></div>
+        ${phFields || '<div class="hint">Ingen placeholders i denne blok.</div>'}
+        <div class="btn-row">
+          <button class="primary" id="btnBlockSave">Gem</button>
+          <button class="secondary" id="btnBlockCancel">Annuller</button>
+        </div>
+      `;
+
+      editorBody.querySelector("#btnBlockSave").onclick = ()=>{
+        editorBody.querySelectorAll("input[data-ph]").forEach(inp=>{
+          const key = inp.dataset.ph;
+          block.placeholders[key] = inp.value;
+        });
+
+        let updated = block.originalText;
+        updated = fillTemplate(updated, block.placeholders);
+        block.text = updated;
+
+        saveState();
+        renderReport();
+        toast("Gemt");
+        closeEditor();
+      };
+
+      editorBody.querySelector("#btnBlockCancel").onclick = closeEditor;
+    }
+
+    /***********************
+     * Modal: add block with placeholders
+     ***********************/
+    let modalContext = null;
+
+    function showModal(){
+      modalBackdrop.classList.add("show");
+      modalBackdrop.setAttribute("aria-hidden","false");
+      setTimeout(()=>{
+        const first = modalBody.querySelector("input");
+        (first || btnModalInsert).focus();
+      }, 0);
+    }
+
+    function hideModal(){
+      modalBackdrop.classList.remove("show");
+      modalBackdrop.setAttribute("aria-hidden","true");
+      modalBody.innerHTML = "";
+      modalContext = null;
+    }
+
+    function openAddBlockModal(snippet){
+      const placeholders = extractPlaceholders(snippet.text);
+      const values = {};
+      placeholders.forEach(p=> values[p] = "");
+
+      modalContext = { snippet, values };
+
+      modalBody.innerHTML = `
+        <div style="margin-bottom:10px;">
+          <div style="font-weight:700; color:#322e6b;">${snippet.title || "Uden titel"}</div>
+          <div style="color:var(--muted); margin-top:4px; font-size:.9rem;">Udfyld felter og indsæt blokken.</div>
+        </div>
+        ${placeholders.length ? placeholders.map(ph => `
+          <div class="field">
+            <label>${ph}</label>
+            <input type="text" data-ph="${ph}" placeholder="${ph}" />
+          </div>
+        `).join("") : '<div class="hint">Ingen placeholders i denne standardsætning.</div>'}
+        <div class="field">
+          <label>Preview</label>
+          <textarea id="modalPreview" readonly style="min-height:110px;">${snippet.text}</textarea>
+        </div>
+      `;
+
+      const preview = modalBody.querySelector("#modalPreview");
+
+      function refreshPreview(){
+        modalBody.querySelectorAll("input[data-ph]").forEach(inp=>{
+          const key = inp.dataset.ph;
+          values[key] = inp.value;
+        });
+        preview.value = fillTemplate(snippet.text, values);
+      }
+
+      modalBody.querySelectorAll("input[data-ph]").forEach(inp=>{
+        inp.addEventListener("input", refreshPreview);
+      });
+
+      refreshPreview();
+      showModal();
+    }
+
+    btnModalInsert.addEventListener("click", ()=>{
+      if(!modalContext) return;
+      const { snippet, values } = modalContext;
+
+      const text = fillTemplate(snippet.text, values);
+
+      const block = {
+        id: crypto.randomUUID(),
+        snippetId: snippet.id,
+        title: snippet.title,
+        originalText: snippet.text,
+        placeholders: values,
+        text
+      };
+
+      const blocks = getBlocks();
+      blocks.push(block);
+      saveState();
+      renderReport();
+      hideModal();
+      toast("Blok indsat");
+    });
+
+    [btnModalClose, btnModalCancel].forEach(btn => btn.addEventListener("click", hideModal));
+    modalBackdrop.addEventListener("click", (e)=>{ if(e.target === modalBackdrop) hideModal(); });
+    document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && modalBackdrop.classList.contains("show")) hideModal(); });
+
+    /***********************
+     * Buttons
+     ***********************/
+    btnAddType.addEventListener("click", ()=>{
+      const name = promptUI("Indtast navn på ny rapporttype:");
+      if(!name) return;
+
+      if(state.reportTypes[name]){
+        toast("Rapporttypen findes allerede");
+        return;
+      }
+      state.reportTypes[name] = [];
+      saveState();
+      // Update type list and optionally navigate to the new type
+      renderTypes();
+      // Immediately select the new type and enter the builder for editing
+      selectType(name);
+      showBuilder();
+      toast("Type oprettet");
+    });
+
+    btnBack.addEventListener("click", ()=>{
+      state.currentType = null;
+      saveState();
+      closeEditor();
+      setView("types");
+      renderTypes();
+    });
+
+    btnToggleLibrary.addEventListener("click", toggleLeftPane);
+    btnToggleEditor.addEventListener("click", toggleRightPane);
+
+    btnShowLibrary.addEventListener("click", ()=>{
+      leftPaneVisible = true;
+      libraryPane.style.display = "";
+      updateBuilderColumns();
+      updatePaneHandles();
+    });
+
+    btnShowEditor.addEventListener("click", ()=>{
+      rightPaneVisible = true;
+      editorPane.style.display = "";
+      updateBuilderColumns();
+      updatePaneHandles();
+    });
+
+    btnReset.addEventListener("click", ()=>{
+      if(confirmUI("Nulstil alt? Dette sletter gemte typer, standardsætninger og rapporter i denne browser.")){
+        localStorage.removeItem(STORAGE_KEY);
+        state = loadState();
+        closeEditor();
+        setView("types");
+        renderTypes();
+        toast("Nulstillet");
+      }
+    });
+
+    btnAddSnippet.addEventListener("click", ()=>{
+      const t = state.currentType;
+      if(!t) return;
+
+      openEditor();
+
+      editorTitle.textContent = "Ny standardsætning";
+      editorBody.innerHTML = `
+        <div class="field">
+          <label for="newTitle">Titel</label>
+          <input id="newTitle" type="text" placeholder="Fx 'Identifikation'" />
+        </div>
+        <div class="field">
+          <label for="newText">Tekst</label>
+          <textarea id="newText" placeholder="Skriv tekst… (brug {placeholder} hvis nødvendigt)"></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="primary" id="btnNewSave">Tilføj</button>
+          <button class="secondary" id="btnNewCancel">Annuller</button>
+        </div>
+      `;
+
+      editorBody.querySelector("#btnNewSave").onclick = ()=>{
+        const title = editorBody.querySelector("#newTitle").value.trim() || "Uden titel";
+        const text = editorBody.querySelector("#newText").value.trim();
+        if(!text){ toast("Tekst kan ikke være tom"); return; }
+
+        state.reportTypes[t].push({ id: crypto.randomUUID(), title, text });
+        saveState();
+        renderLibrary();
+        toast("Tilføjet");
+        closeEditor();
+      };
+      editorBody.querySelector("#btnNewCancel").onclick = closeEditor;
+    });
+
+    btnClearBlocks.addEventListener("click", ()=>{
+      const blocks = getBlocks();
+      if(!blocks.length){ toast("Rapporten er allerede tom"); return; }
+      if(confirmUI("Ryd rapporten for denne type?")){
+        blocks.length = 0;
+        saveState();
+        renderReport();
+        closeEditor();
+        toast("Rapport ryddet");
+      }
+    });
+
+    btnCopy.addEventListener("click", async ()=>{
+      const text = getBlocks().map(b=>b.text).join("\n\n");
+      output.value = text;
+
+      try{
+        await navigator.clipboard.writeText(text);
+        toast("Kopieret");
+      }catch{
+        toast("Kunne ikke kopiere (browser)");
+      }
+    });
+
+    btnEmail.addEventListener("click", ()=>{
+      const t = state.currentType || "";
+      const text = getBlocks().map(b=>b.text).join("\n\n");
+      const subject = encodeURIComponent("Rapport – " + t);
+      const body = encodeURIComponent(text);
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    });
+
+    // Save report: persists current report blocks and notifies the user
+    if(btnSaveReport) btnSaveReport.addEventListener("click", ()=>{
+      if(!state.currentType){ toast("Ingen rapport valgt"); return; }
+      // Persist the state (this will also update reports view)
+      saveState();
+      toast("Rapport gemt");
+    });
+
+    // Navigation and authentication button handlers
+    if(navHome) navHome.addEventListener("click", (e)=>{ e.preventDefault(); showHome(); });
+    if(navInfo) navInfo.addEventListener("click", (e)=>{ e.preventDefault(); showInfo(); });
+    if(navReports) navReports.addEventListener("click", (e)=>{ e.preventDefault(); showReports(); });
+    if(navBuilder) navBuilder.addEventListener("click", (e)=>{ e.preventDefault(); showBuilder(); });
+    if(navLogin) navLogin.addEventListener("click", (e)=>{ e.preventDefault(); showAuth("login"); });
+    if(navLogout) navLogout.addEventListener("click", (e)=>{ e.preventDefault(); logout(); });
+    if(homeLogin) homeLogin.addEventListener("click", ()=> showAuth("login"));
+    if(homeSignup) homeSignup.addEventListener("click", ()=> showAuth("signup"));
+    if(homeInfo) homeInfo.addEventListener("click", ()=> showInfo());
+    if(authSwitchBtn) authSwitchBtn.addEventListener("click", ()=>{
+      if(signupForm.style.display === "none") showAuth("signup");
+      else showAuth("login");
+    });
+    if(loginForm) loginForm.addEventListener("submit", (e)=>{
+      e.preventDefault();
+      const username = loginUsername.value.trim();
+      const password = loginPassword.value;
+      if(!username || !password){ toast("Udfyld felterne"); return; }
+      const user = users[username];
+      if(user && user.password === password){
+        setCurrentUser(username);
+        // ensure user state exists
+        if(!user.state){ user.state = structuredClone(defaultData); }
+        state = loadState();
+        saveUsers(users);
+        renderNav();
+        toast("Logget ind");
+        showBuilder();
+      }else{
+        toast("Forkert brugernavn eller kodeord");
+      }
+    });
+    if(signupForm) signupForm.addEventListener("submit", (e)=>{
+      e.preventDefault();
+      const username = signupUsername.value.trim();
+      const pw = signupPassword.value;
+      const pw2 = signupPassword2.value;
+      if(!username || !pw || !pw2){ toast("Udfyld felterne"); return; }
+      if(pw !== pw2){ toast("Kodeord matcher ikke"); return; }
+      if(users[username]){ toast("Brugernavnet findes allerede"); return; }
+      users[username] = { password: pw, state: structuredClone(defaultData) };
+      saveUsers(users);
+      setCurrentUser(username);
+      state = loadState();
+      renderNav();
+      toast("Konto oprettet og logget ind");
+      showBuilder();
+    });
+
+    /***********************
+     * Init
+     ***********************/
+    function init(){
+      // Initialize navigation and decide which view to show
+      renderNav();
+      // state has been loaded earlier according to currentUser
+      if(currentUser){
+        // ensure state is up-to-date for logged in user
+        state = loadState();
+        showBuilder();
+      }else{
+        // guest / not logged in
+        showHome();
+      }
+      window.addEventListener("resize", ()=>{
+        updateBuilderColumns();
+        updatePaneHandles();
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
