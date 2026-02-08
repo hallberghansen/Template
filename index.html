@@ -736,6 +736,36 @@
         gap: 8px;
         margin-top: 8px;
       }
+      /* Position the modal like a bottom sheet on mobile so it doesn't obscure the library/editor */
+      .modal-backdrop{
+        align-items: flex-end;
+      }
+      .modal{
+        width: 100%;
+        max-width: none;
+        border-radius: 16px 16px 0 0;
+        margin-bottom: 0;
+      }
+
+      /* On small screens, stack builder panes vertically and place the report preview at the bottom.
+         Using flexbox allows us to control the order of library, editor and main sections without
+         changing the markup. This prevents the preview (rapportfremviser) from interrupting the
+         flow between the library and editing menu. */
+      .builder{
+        display:flex;
+        flex-direction:column;
+        height:auto;
+        min-height:unset;
+      }
+      #libraryPane{
+        order:1;
+      }
+      #editorPane{
+        order:2;
+      }
+      .builder > main{
+        order:3;
+      }
     }
 
   </style>
