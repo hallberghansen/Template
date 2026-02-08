@@ -657,8 +657,8 @@
       margin-bottom:8px;
     }
     .report-item:hover{
-      /* On hover, lightly tint the panel with the secondary color */
-      background:rgba(186, 19, 114, 0.08);
+      /* Keep report buttons white on hover so they don't change colour on mobile */
+      background:#fff;
     }
 
     /* Delete button inside report items */
@@ -710,6 +710,32 @@
     #btnBack,
     #btnReset {
       display: none !important;
+    }
+
+    /* =================================
+       Responsive and mobile fixes
+       These rules improve mobile behaviour by adapting heights and allowing
+       navigation to wrap on smaller screens. The dynamic viewport unit (100dvh)
+       prevents content from being cut off by mobile browser chrome. The
+       -webkit-fill-available fallback addresses iOS Safari quirks. Finally,
+       the navigation bar wraps its links gracefully on small devices. */
+    @supports (height: 100dvh) {
+      .builder {
+        height: calc(100dvh - 120px);
+      }
+    }
+    html {
+      height: -webkit-fill-available;
+    }
+    body {
+      min-height: -webkit-fill-available;
+    }
+    @media (max-width: 720px) {
+      .top-nav {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+      }
     }
 
   </style>
